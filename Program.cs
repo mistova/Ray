@@ -3,64 +3,6 @@ using System.Numerics;
 
 namespace Ray{
     class Program{
-        class Material
-        {
-            public Vector3 color;
-            public Material()
-            {
-                this.color = new Vector3(0, 0, 0);
-            }
-            public Material(Vector3 clr)
-            {
-                color = clr;
-            }
-        }
-        class Light
-        {
-            public Vector3 position;
-            public float intensity;
-            public Light()
-            {
-
-            }
-            public Light(Vector3 p, float i)
-            {
-                position = p;
-                intensity = i;
-            }
-        }
-        class Sphere{
-            public Vector3 center;
-            public float radius;
-            public Material material;
-            public Sphere(){
-                center = new Vector3(5, 5, 5);
-                radius = 2f;
-                material = new Material();
-            }
-            public Sphere(Vector3 c, float r, Material m)
-            {
-                center = c;
-                radius = r;
-                material = m;
-            }
-
-            public bool RayIntersect(Vector3 orig, Vector3 dir, ref float t0){
-                Vector3 L = center - orig;
-                float tca = Vector3.Dot(L, dir);
-                float d2 = Vector3.Dot(L, L) - (tca * tca);
-                if (d2 > radius * radius) 
-                    return false;
-                float thc = (float)Math.Sqrt(radius * radius - d2);
-                t0 = tca - thc;
-                float t1 = tca + thc;
-                if (t0 < 0) 
-                    t0 = t1;
-                if (t0 < 0) 
-                    return false;
-                return true;
-            }
-        }
         static bool SceneIntersect(Vector3 orig, Vector3 dir, Sphere[] spheres, ref Vector3 hit, ref Vector3 N, ref Material material) {
             float spheres_dist = float.MaxValue;
             for (int i=0; i<spheres.Length; i++) {
@@ -78,16 +20,20 @@ namespace Ray{
             Vector3 point = new Vector3(), N = new Vector3();
             Material material = new Material();
             if (!SceneIntersect(orig, dir, spheres, ref point, ref N, ref material))
-                return new Vector3(1, 1, 1); 
-            float diffuseLightIntensity = 0;
+                return new Vector3(1, 1, 1);
+            float diffuseLightIntensity = 0, specularLightIntensity = 0;
             for (int i = 0; i < lights.Length; i++)
             {
                 Vector3 lightDir = Vector3.Normalize(lights[i].position - point);
                 diffuseLightIntensity += lights[i].intensity * Math.Max(0, Vector3.Dot(lightDir, N));
+                specularLightIntensity += (float) Math.Pow(Math.Max(0, - Vector3.Dot(Reflect(lightDir, N), dir)), material.SpecularExponent) * lights[i].intensity;
             }
-            return material.color * diffuseLightIntensity;
+            return (material.Color * diffuseLightIntensity * material.Albedo.X) + (new Vector3(1, 1, 1) * specularLightIntensity * material.Albedo.Y);
         }
-        static void Render(Sphere[] spheres, Light[] lights){
+        static Vector3 Reflect(Vector3 I, Vector3 N){
+            return I - N * 2.0f * Vector3.Dot(I, N);
+        }
+    static void Render(Sphere[] spheres, Light[] lights){
             const int width = 1024;
             const int height = 768;
             Vector3[] framebuffer = new Vector3[width * height];
@@ -104,19 +50,24 @@ namespace Ray{
             string path = "C:/Users/windo/Desktop/out.ppm";
             FileWriter.PPMWriter(framebuffer, width, height, path);
         }
-        static void Main(string[] args){
+        static void Main(){
             Console.WriteLine("Start");
-            Material ivory = new Material(new Vector3(0.4f, 0.4f, 0.3f));
-            Material redRubber = new Material(new Vector3(0.3f, 0.1f, 0.1f));
+
+            Material ivory = new Material(new Vector3(0.4f, 0.4f, 0.3f), new Vector2(0.6f, 0.3f), 50);
+            Material redRubber = new Material(new Vector3(0.3f, 0.1f, 0.1f), new Vector2(0.9f, 0.1f), 10);
 
             Sphere[] spheres = new Sphere[4];
             spheres[0] = new Sphere(new Vector3(-3, 0, -16), 2, ivory);
             spheres[1] = new Sphere(new Vector3(-1.0f, -1.5f, -12), 2, redRubber);
             spheres[2] = new Sphere(new Vector3(1.5f, -0.5f, -18), 3, redRubber);
-            spheres[3] = new Sphere(new Vector3(7, 5, -18), 4, ivory);
+            spheres[3] = new Sphere(new Vector3(0, 0, -60), 30, ivory);
 
-            Light[] lights = new Light[1];
+            Light[] lights = new Light[4];
             lights[0] = new Light(new Vector3(-20, 20, 20), 1.5f);
+            lights[0] = new Light(new Vector3(-20, 20, 20), 1.5f);
+            lights[1] = new Light(new Vector3(-20, 20, 20), 1.5f);
+            lights[2] = new Light(new Vector3(30, 50, -25), 1.8f);
+            lights[3] = new Light(new Vector3(30, 20, 30), 1.7f);
 
             Render(spheres, lights);
             Console.WriteLine("End");
