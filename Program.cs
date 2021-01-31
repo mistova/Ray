@@ -25,6 +25,14 @@ namespace Ray{
             for (int i = 0; i < lights.Length; i++)
             {
                 Vector3 lightDir = Vector3.Normalize(lights[i].position - point);
+
+                float lightDistance = (lights[i].position - point).Length();
+
+                Vector3 shadowOrig = Vector3.Dot(lightDir, N)  < 0 ? point - N * (float) 1e-3 : point + N * (float) 1e-3;
+                Vector3 shadowPt = new Vector3(), shadowN = new Vector3();
+                Material tmpMaterial = new Material();
+                if (SceneIntersect(shadowOrig, lightDir, spheres, ref shadowPt, ref shadowN, ref tmpMaterial) && (shadowPt - shadowOrig).Length() < lightDistance)
+                    continue;
                 diffuseLightIntensity += lights[i].intensity * Math.Max(0, Vector3.Dot(lightDir, N));
                 specularLightIntensity += (float) Math.Pow(Math.Max(0, - Vector3.Dot(Reflect(lightDir, N), dir)), material.SpecularExponent) * lights[i].intensity;
             }
